@@ -1,24 +1,20 @@
-## README
+TODO:
+- Add ability for rails to read env file
+- Make stripe id in config/secrets.yml reference and env variable
+- Write model method to query the data field to determine if I need to
+call the API or not
+- Return array of events from the find_all_* method
+- Add unit tests
+- Add functional tests
+- Event.where("(data ->> 'created')::int > ?", 1452464455).count
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
 
-Things you may want to cover:
+QUESTIONS:
+- Will response time out before API responds with all of the data?
 
-* Ruby version
+UNIQUE FEATURES:
+- Set stripe_id via an environment variable. Because we're working with
+one customer at a time and in a support scenario, this variable can be
+manually set for each request thus limiting account details to the
+interwebs.
 
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...

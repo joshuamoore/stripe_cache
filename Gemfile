@@ -11,7 +11,8 @@ gem 'pg', '~> 0.18'
 gem 'puma'
 
 gem 'stripe'
-gem 'stripe-ruby-mock', '~> 2.2.1', :require => 'stripe_mock'
+gem 'stripe-ruby-mock', git: "git@github.com:rebelidealist/stripe-ruby-mock.git", branch: "master", require: 'stripe_mock'
+gem 'rspec-collection_matchers'
 
 # Use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'
@@ -34,6 +35,10 @@ end
 
 group :development, :test do
   gem 'rspec-rails', '~> 3.0'
+end
+
+group :test do
+  gem 'shoulda-matchers', '~> 3.0'
 end
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem

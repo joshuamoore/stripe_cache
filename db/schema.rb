@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160109222008) do
+ActiveRecord::Schema.define(version: 20160109224347) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -21,6 +21,8 @@ ActiveRecord::Schema.define(version: 20160109222008) do
     t.json     "data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string   "object_id"
+    t.index ["object_id"], name: "index_events_on_object_id", using: :btree
   end
 
 end
