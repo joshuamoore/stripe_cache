@@ -9,8 +9,6 @@ class V1::EventsController < ApplicationController
   end
 
   def show
-    # id - REQUIRED - The identifier of the event to be retrieved.
-
     if @event.blank?
       stripe_response = Stripe::Event.retrieve(event_params[:id])
 
@@ -33,10 +31,14 @@ class V1::EventsController < ApplicationController
   end
 
   def event_params
-    params.
-      permit(
-        :id, :ending_before, :limit, :starting_after, :type,
-        created: [:gt, :gte, :lt, :lte]
-      )
+    permitted_values = [:id, :ending_before, :limit, :starting_after, :type]
+
+    if params[:created].is_a?(String)
+      permitted_values << :created
+    else
+      permitted_values << [created: [:gt, :gte, :lt, :lte]]
+    end
+
+    params.permit(permitted_values).to_h.deep_symbolize_keys
   end
 end

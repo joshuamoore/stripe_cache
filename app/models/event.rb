@@ -2,59 +2,65 @@ class Event < ApplicationRecord
 
   validates_presence_of :stripe_id, :object_id, :data
 
+  LIMIT_MIN = 1
+  LIMIT_MAX = 100
+
   def self.build_new!(stripe_id, stripe_response)
-    Event.create(stripe_id: stripe_id, object_id: stripe_response.try(:id), data: stripe_response.as_json)
+    Event.
+      where(stripe_id: stripe_id, object_id: stripe_response.try(:id)).
+      first_or_create(data: stripe_response.as_json)
   end
 
   def self.find_all_with_params(params={})
     conditions = Event.conditions_for_stripe(params)
-
-    conditions["include[]"] = "total_count"
-
     response = Stripe::Event.all(conditions)
-    response_data = response.data
 
+    response_data = response.data
     has_more = response.has_more
-    total_count = response.total_count
+    total_count = response.try(:total_count) || response.data.count
     local_count = Event.records_for_params(params).count
-    has_synced_results = local_count >= total_count
-    if !has_synced_results
-      # query number of events that match the params in our database
-      # and if the number in stripe is different than the number in the db
-      # then delete all in the db and save all and recurse the stripe data
-      if total_count != local_count
+
+    should_save_events_from_stripe = local_count < total_count
+
+    if should_save_events_from_stripe
+      if response_data && response_data.is_a?(Array)
         response_data.each do |stripe_response|
           Event.build_new!(Rails.application.secrets.stripe_api_key, stripe_response)
         end
       end
 
       # if there are more events to be had, then paginate via recursion
-      if has_more
-        starting_after = response_data.last.id
+      if has_more && response_data.count > 1
+        starting_after = response_data.last.try(:id)
 
-        params[:starting_after] = starting_after
-        puts "paginating.... #{starting_after}"
+        if starting_after.present?
+          params[:starting_after] = starting_after
 
-        Event.find_all_with_params(params)
+          Event.find_all_with_params(params)
+        end
+      else
+        Event.records_for_params(params)
       end
+    else
+      Event.records_for_params(params)
     end
   end
 
   def self.conditions_for_stripe(params={})
     conditions = {}
 
-    if params[:created].is_a?(Integer)
+    if params[:created].is_a?(String)
       conditions[:created] = params[:created]
     elsif params[:created].is_a?(Hash)
       conditions[:created] = {}
 
-      if params[:created][:gt].is_a?(Integer)
+      if params[:created][:gt].is_a?(String)
         conditions[:created][:gt] = params[:created][:gt]
-      elsif params[:created][:gte].is_a?(Integer)
+      elsif params[:created][:gte].is_a?(String)
         conditions[:created][:gte] = params[:created][:gte]
-      elsif params[:created][:lt].is_a?(Integer)
+      elsif params[:created][:lt].is_a?(String)
         conditions[:created][:lt] = params[:created][:lt]
-      elsif params[:created][:lte].is_a?(Integer)
+      elsif params[:created][:lte].is_a?(String)
         conditions[:created][:lte] = params[:created][:lte]
       end
     end
@@ -63,7 +69,7 @@ class Event < ApplicationRecord
       conditions[:ending_before] = params[:ending_before]
     end
 
-    if params[:limit].present? && (params[:limit].to_i > 1 && params[:limit].to_i <= 100)
+    if params[:limit].present? && (params[:limit].to_i > LIMIT_MIN && params[:limit].to_i <= LIMIT_MAX)
       conditions[:limit] = params[:limit].to_i
     end
 
@@ -77,27 +83,31 @@ class Event < ApplicationRecord
       conditions[:type] = params[:type]
     end
 
+    # have Stripe include the total number of overall events available
+    conditions["include[]"] = "total_count"
+
     conditions
   end
 
   def self.conditions_for_params(params={})
     conditions = []
     values = {}
+    result = []
 
-    if params[:created].is_a?(Integer)
+    if params[:created].is_a?(String)
       conditions << "(data ->> 'created')::int = :created"
       values[:created] = params[:created]
     elsif params[:created].is_a?(Hash)
-      if params[:created][:gt].is_a?(Integer)
+      if params[:created][:gt].is_a?(String)
         conditions << "(data ->> 'created')::int > :created"
         values[:created] = params[:created][:gt]
-      elsif params[:created][:gte].is_a?(Integer)
+      elsif params[:created][:gte].is_a?(String)
         conditions << "(data ->> 'created')::int >= :created"
         values[:created] = params[:created][:gte]
-      elsif params[:created][:lt].is_a?(Integer)
+      elsif params[:created][:lt].is_a?(String)
         conditions << "(data ->> 'created')::int < :created"
         values[:created] = params[:created][:lt]
-      elsif params[:created][:lte].is_a?(Integer)
+      elsif params[:created][:lte].is_a?(String)
         conditions << "(data ->> 'created')::int <= :created"
         values[:created] = params[:created][:lte]
       end
@@ -110,11 +120,15 @@ class Event < ApplicationRecord
       values[:type] = params[:type]
     end
 
-    [conditions.join(" AND "), values]
+    if conditions.present? && values.present?
+      result = [conditions.join(" AND "), values]
+    end
+
+    result
   end
 
   def self.records_for_params(params={})
-    Event.where(Event.records_for_params(params))
+    Event.where(Event.conditions_for_params(params))
   end
 
   def self.is_valid_event?(value)

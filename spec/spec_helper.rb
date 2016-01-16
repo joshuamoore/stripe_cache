@@ -14,7 +14,27 @@
 # users commonly want.
 #
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
+require 'factory_girl_rails'
+require 'database_cleaner'
+
 RSpec.configure do |config|
+  config.include FactoryGirl::Syntax::Methods
+
+  config.before(:suite) do
+    begin
+      DatabaseCleaner.start
+      #FactoryGirl.lint
+    ensure
+      DatabaseCleaner.strategy = :transaction
+      DatabaseCleaner.clean_with(:truncation)
+    end
+  end
+
+  config.around(:each) do |example|
+    DatabaseCleaner.cleaning do
+      example.run
+    end
+  end
 
   config.expect_with :rspec do |c|
     c.syntax = [:should, :expect]

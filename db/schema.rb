@@ -11,18 +11,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160109224347) do
+ActiveRecord::Schema.define(version: 20160116172342) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
   create_table "events", force: :cascade do |t|
-    t.integer  "stripe_id"
+    t.string   "stripe_id"
     t.json     "data"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string   "object_id"
     t.index ["object_id"], name: "index_events_on_object_id", using: :btree
+    t.index ["stripe_id"], name: "index_events_on_stripe_id", using: :btree
   end
 
 end

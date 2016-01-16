@@ -12,7 +12,9 @@ gem 'puma'
 
 gem 'stripe'
 gem 'stripe-ruby-mock', git: "git@github.com:rebelidealist/stripe-ruby-mock.git", branch: "master", require: 'stripe_mock'
+gem 'factory_girl_rails'
 gem 'rspec-collection_matchers'
+gem 'database_cleaner'
 
 # Use ActiveModel has_secure_password
 # gem 'bcrypt', '~> 3.1.7'
@@ -26,6 +28,7 @@ gem 'rspec-collection_matchers'
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem 'byebug'
+  gem 'dotenv-rails'
 end
 
 group :development do
